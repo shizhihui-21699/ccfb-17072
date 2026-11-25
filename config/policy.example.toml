@@ -1,0 +1,78 @@
+# userns-guard policy.
+#
+# Rollout order:
+#   1. mode = "disabled" while deploying collectors.
+#   2. mode = "audit" for at least one full business cycle.
+#   3. Add missing browser/desktop/container binaries after reviewing chains.
+#   4. Switch a canary host/cgroup to mode = "enforce", then broaden.
+#
+# failure_mode describes loader/map failure, not ordinary policy decisions.
+# Keep it "open" during the first audit phase; move to "closed" only after the
+# allowlist and service ordering have been proven.
+
+version = 1
+mode = "audit"              # disabled | audit | enforce
+failure_mode = "open"       # open | closed
+default_action = "deny"
+
+# Strong example: exact path plus content hash. Populate hashes with:
+#   userns-guard reconcile --policy /etc/userns-guard/policy.toml --hash --json
+[[allow]]
+name = "oci-runc-pinned"
+categories = ["container-runtime"]
+paths = ["/usr/bin/runc"]
+# sha256 = ["<64-hex-sha256-on-target-image>"]
+# Optional blast-radius constraint:
+# cgroup_prefixes = ["/system.slice/containerd.service/"]
+reason = "OCI runtime creates namespaces before container init"
+
+[[allow]]
+name = "rootless-container-stack"
+categories = ["container-runtime"]
+paths = [
+  "/usr/bin/podman",
+  "/usr/bin/rootlesskit",
+  "/usr/bin/crun",
+  "/usr/bin/slirp4netns",
+  "/usr/bin/pasta",
+]
+
+# bwrap is useful to Flatpak and many desktop apps, but it is also a generic
+# sandbox primitive. Prefer ancestor/cgroup/LSM constraints over a broad trust.
+[[allow]]
+name = "bubblewrap-for-flatpak"
+categories = ["desktop-sandbox"]
+paths = ["/usr/bin/bwrap"]
+ancestor_paths = ["/usr/bin/flatpak"]
+
+[[allow]]
+name = "google-chrome"
+categories = ["browser-sandbox"]
+paths = [
+  "/opt/google/chrome/chrome",
+  "/opt/google/chrome/chrome-sandbox",
+]
+
+[[allow]]
+name = "distro-chromium"
+categories = ["browser-sandbox"]
+paths = [
+  "/usr/lib/chromium/chromium",
+  "/usr/lib/chromium/chrome-sandbox",
+]
+
+[[allow]]
+name = "firefox"
+categories = ["browser-sandbox"]
+paths = [
+  "/usr/lib/firefox/firefox",
+  "/usr/lib/firefox/firefox-bin",
+]
+
+# Explicit deny rules override allow rules. Useful when one path is in a broad
+# package preset but a specific host must never use unprivileged userns.
+[[deny]]
+name = "deny-example"
+enabled = false
+paths = ["/usr/bin/unshare"]
+reason = "Generic unshare(1) is not an approved runtime on this server"

@@ -1,0 +1,29 @@
+[package]
+name = "userns-guard"
+version = "0.1.0"
+edition = "2021"
+description = "Program-scoped user namespace creation control and call-chain audit"
+license = "MIT OR Apache-2.0"
+
+[lib]
+name = "userns_guard"
+path = "src/lib.rs"
+
+[[bin]]
+name = "userns-guard"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+hex = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+thiserror = "2"
+toml = "0.8"
+
+[dev-dependencies]
+tempfile = "3"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"

@@ -16,3 +16,10 @@ node_modules/
 __pycache__/
 .venv/
 venv/
+
+# Rust / eBPF build outputs
+/target
+**/target
+*.o
+*.bpf.o
+bpf/vmlinux.h
